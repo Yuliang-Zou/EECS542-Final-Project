@@ -50,6 +50,7 @@ class DAVIS_dataloader(object):
 		self.num_images = len(self.img_list)
 		self.temp_pointer = 0
 		self.epoch = 0
+		self.step = 0
 		self._shuffle()
 
 		self.batch_num = config['batch_num']
@@ -68,6 +69,9 @@ class DAVIS_dataloader(object):
 
 	def get_epoch(self):
 		return self.epoch
+
+	def get_step(self):
+		return self.step
 
 	def get_next_minibatch(self):
 		img_blobs = []
@@ -88,6 +92,9 @@ class DAVIS_dataloader(object):
 		if shuffle_flag:
 			self._shuffle()
 			self.epoch += 1
+			self.step = 0
+		else:
+			self.step += 1
 
 		return np.array(img_blobs), np.array(np.expand_dims(seg_blobs, axis=3))
 

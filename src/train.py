@@ -51,7 +51,11 @@ if __name__ == '__main__':
 
 			loss_list.append(temp_loss)
 			# f.write(str(temp_loss) + '\n')
-			print str(i) + ': ' + str(temp_loss)
+			# print str(i) + ': ' + str(temp_loss)
+			print('Epoch:[%d/%d], Step:[%d/%d]. Loss: %.4f' 
+				% (data_loader.get_epoch(), config['epoch'], 
+					data_loader.get_step(), data_loader.step_per_epoch(),
+					temp_loss))
 
 			# Learning rate decay
 			# if len(loss_list) > 100 and not DECAY:
