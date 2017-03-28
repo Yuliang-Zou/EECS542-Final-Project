@@ -462,14 +462,121 @@ class BaseNet(Network):
 		# self.train_op = tf.train.AdamOptimizer(self.base_lr).minimize(self.loss)
 
 
+"""Baseline model + ConvLSTM"""
+class ConvBaseNet(BaseNet):
+	def __init__(self, config):
+		# Different behaviors during trainig/test
+		self.mode = config['mode']
+
+		BaseNet.__init__(self, config)
+		
+	"""Override"""
+	def set_up(self):
+		self.add_conv(self.img)
+		self.add_deconv()
+		# Add ConvLSTM
+		self.add_conv_lstm()
+		self.add_predict()
+		self.add_loss_op()
+		self.add_weight_decay()
+		self.add_train_op()
+
+	"""Add ConvLSTM to model temporal relationship"""
+	def add_conv_lstm(self):
+		input = self.get_output('merge')
+
+		num_features = 64
+		forget_bias = 1.0
+		filter_size = 3
+		activation = tf.nn.tanh
+
+		with tf.variable_scope('conv_lstm') as scope:
+			w = tf.get_variable('weights', [filter_size, filter_size, 
+				2 * num_features, 4 * num_features], 
+				initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
+			b = tf.get_variable('biases', [4*num_features], 
+				initializer=tf.constant_initializer(0))
+
+		# Add to store dict
+		self.layers['conv_lstm'] = {'weights':w, 'biases':b}
+
+		shape1 = tf.shape(input)[1]
+		shape2 = tf.shape(input)[2]
+
+		# Training
+		if self.mode == 'TRAIN':
+			# Initialize with zero states
+			cell = tf.zeros([1,shape1,shape2,num_features])
+			hidd = tf.zeros([1,shape1,shape2,num_features])
+			output = []
+
+			for i in range(self.batch_num):
+				concat = tf.nn.conv2d(tf.concat(3, [input[i:i+1,:,:,:], hidd]),
+					w, strides=[1,1,1,1], padding='SAME') + b
+				i, j, f, o = tf.split(3, 4, concat)
+
+				new_cell = (cell * tf.nn.sigmoid(f + forget_bias) + 
+					tf.nn.sigmoid(i) * activation(j))
+				new_hidd = activation(new_cell) + tf.nn.sigmoid(o)
+				output.append(new_hidd)
+
+				cell = new_cell
+				hidd = new_hidd
+
+				if i == 0:
+					tf.get_variable_scope('conv_lstm').reuse_variables()
+
+			conv_lstm = tf.concat(0, output)
+			self.outputs['conv_lstm'] = conv_lstm
+
+		# Test
+		elif self.mode == 'TEST':
+			# Add placeholder
+			self.cell = tf.placeholder(tf.float32, 
+				[1, None, None, num_features])
+			self.hidd = tf.placeholder(tf.float32,
+				[1, None, None, num_features])
+
+			concat = tf.nn.conv2d(tf.concat(3, [input, self.hidd]), w,
+				strides=[1,1,1,1], padding='SAME') + b
+			i, j, f, o = tf.split(3, 4, concat)
+
+			new_cell = (self.cell * tf.nn.sigmoid(f + forget_bias) + 
+				tf.nn.sigmoid(i) * activation(j))
+			new_hidd = activation(new_cell) + tf.nn.sigmoid(o)
+
+			self.outputs['conv_lstm'] = new_hidd
+			self.outputs['cell'] = new_cell
+		else:
+			raise KeyError
+
+
+	"""Override: Add final conv layer to predict"""
+	def add_predict(self):
+		conv_lstm = self.get_output('conv_lstm')
+
+		with tf.variable_scope('predict') as scope:
+			w = tf.get_variable('weights', [3, 3, 64, 2],
+				initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
+			b = tf.get_variable('biases', [2],
+				initializer=tf.constant_initializer(0))
+			z = tf.nn.conv2d(conv_lstm, w, strides= [1, 1, 1, 1],
+				padding='SAME') + b
+
+		# Add to store dicts
+		self.outputs['predict'] = z
+		self.layers['predict']  = {'weights':w, 'biases':b}
+
 if __name__ == '__main__':
 	config = {
-	'batch_num':5, 
+	'batch_num':1, # Must be 1 for ConvBaseNet
 	'iter':100000, 
 	'weight_decay': 0.0005,
 	'base_lr': 0.0001,
-	'momentum': 0.9
+	'momentum': 0.9,
+	'mode': 'TEST'
 	}
 
-	model = BaseNet(config)
+	# model = BaseNet(config)
+	model = ConvBaseNet(config)
 
