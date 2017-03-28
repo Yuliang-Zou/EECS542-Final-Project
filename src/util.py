@@ -178,7 +178,6 @@ def bilinear_upsample_weights(factor, number_of_classes):
 	return weights
 
 
-
 if __name__ == '__main__':
 	root = '../data/VOCdevkit/VOC2011/'
 	im_name = root + 'JPEGImages/2007_000033.jpg'

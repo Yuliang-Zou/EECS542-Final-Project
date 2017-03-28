@@ -435,13 +435,17 @@ class BaseNet(Network):
 		shape1 = tf.shape(pred)[1]
 		shape2 = tf.shape(pred)[2]
 
-		loss_reshape = tf.nn.sparse_softmax_cross_entropy_with_logits(pred_reshape, gt_reshape)
-		loss = tf.reshape(loss_reshape, [self.batch_num, shape1, shape2, 1])
-		# loss_valid = tf.reduce_sum(loss * self.mask, (1,2,3))
+		Y_pos = tf.to_float(tf.reduce_sum(gt_reshape))
+		beta = 1 - Y_pos / tf.to_float(self.batch_num * shape1 * shape2)
 
-		# valid_pixels = tf.reduce_sum(self.mask, (1,2,3))
-		# loss_avg = tf.reduce_mean(loss_valid / valid_pixels)
-		loss_avg = tf.reduce_mean(loss)
+		loss_reshape = tf.nn.sparse_softmax_cross_entropy_with_logits(pred_reshape, gt_reshape)
+		# loss = tf.reshape(loss_reshape, [self.batch_num, shape1, shape2, 1])
+		idx_pos = tf.to_int32(tf.where(tf.equal(gt_reshape, 1)))
+		loss_pos = beta * tf.gather(loss_reshape, idx_pos)
+		idx_neg = tf.to_int32(tf.where(tf.equal(gt_reshape, 0)))
+		loss_neg = (1 - beta) * tf.gather(loss_reshape, idx_neg)
+
+		loss_avg = tf.reduce_mean(loss_pos) + tf.reduce_mean(loss_neg)
 
 		self.loss = loss_avg
 

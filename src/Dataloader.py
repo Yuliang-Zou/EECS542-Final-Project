@@ -11,6 +11,7 @@ except:
 import numpy as np
 from os.path import join
 import cv2
+import glob
 
 # import multiprocessing
 
@@ -99,17 +100,74 @@ class DAVIS_dataloader(object):
 		return np.array(img_blobs), np.array(np.expand_dims(seg_blobs, axis=3))
 
 
+"""
+The sequence dataloader for DAVIS
+
+TODO: multiprocessing version
+"""
+class DAVIS_seq_dataloader(object):
+	def __init__(self, config):
+		self.root = '../data/DAVIS/'
+		seq_set = self.root + 'SequenceSets/trainval.txt'
+		with open(seq_set) as f:
+			self.seq_list = f.read().rstrip().split('\n')
+
+		self.num_seq = len(self.seq_list)
+		self.temp_pointer = 0
+		self.epoch = 0
+
+		# Get length of each sequence
+		self.seq_len = {}
+		for seq in self.seq_list:
+			temp = glob.glob(self.root + 'JPEGImages/480p/' + seq + '*.jpg')
+			self.seq_len[seq] = len(temp)
+
+		self.batch_num = config['batch_num']    # Actually sequence length
+		self._shuffle()
+
+	def _shuffle(self):
+		self.seq_list = np.random.permutation(self.seq_list)
+		self.temp_pointer = 0
+
+	def _img_at(self, name):
+		return self.root + 'JPEGImages/480p/' + name
+
+	def _seg_at(self, name):
+		return self.root + 'Annotations/480p/' + name
+
+	def get_next_minibatch(self):
+		img_blobs = []
+		seg_blobs = []
+		seq = self.seq_list[self.temp_pointer]
+		idx = np.random.randint(self.seq_len[seq] - self.batch_num)
+		for i in range(self.batch_num):
+			name = seq + '%05d' % (idx + i)
+			img  = cv2.imread(self._img_at(name + '.jpg')) - MEAN_PIXEL
+			seg  = cv2.imread(self._seg_at(name + '.png'), cv2.CV_LOAD_IMAGE_GRAYSCALE) / 255
+
+			img_blobs.append(img)
+			seg_blobs.append(seg)
+
+			self.temp_pointer += 1
+			if self.temp_pointer >= self.num_seq:
+				self._shuffle()
+				self.epoch += 1
+
+		return np.array(img_blobs), np.array(np.expand_dims(seg_blobs, axis=3))
+
+
 if __name__ == '__main__':
 	config = {
-	'batch_num':10, 
+	'batch_num':5, 
 	'iter':100000, 
 	'weight_decay': 0.0005,
 	'base_lr': 0.001,
 	'momentum': 0.9
 	}
 
-	dataloader = DAVIS_dataloader(config)
+	# dataloader = DAVIS_dataloader(config)
+	# minibatch = dataloader.get_next_minibatch()
+	dataloader = DAVIS_seq_dataloader(config)
 	minibatch = dataloader.get_next_minibatch()
-
 
 	ipdb.set_trace()

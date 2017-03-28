@@ -14,8 +14,8 @@ except:
 
 
 config = {
-'batch_num':10, 
-'epoch':10, 
+'batch_num':5, 
+'epoch':100, 
 'weight_decay': 0.0005,
 'base_lr': 1e-8,
 'momentum': 0.9
@@ -67,12 +67,12 @@ if __name__ == '__main__':
 			# Monitor
 			if i % 20 == 0 and i != 0:
 				loss /= 20
-				print 'Iter: {}'.format(i) + '/{}'.format(config['iter']) + ', loss = ' + str(loss)					
+				print 'Iter: {}'.format(i) + '/{}'.format(num_iters) + ', loss = ' + str(loss)					
 				loss = 0
 
 			# Write to saver
 			if i % 5000 == 0 and i != 0:
-				saver.save(session, '../model/FCN16_adam_iter_'+str(i)+'.ckpt')
+				saver.save(session, '../model/BaseNet_iter_'+str(i)+'.ckpt')
 
 	# f.close()
 
