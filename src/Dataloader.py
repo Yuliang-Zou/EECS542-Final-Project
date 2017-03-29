@@ -122,7 +122,7 @@ class DAVIS_seq_dataloader(object):
 			temp = glob.glob(self.root + 'JPEGImages/480p/' + seq + '*.jpg')
 			self.seq_len[seq] = len(temp)
 
-		self.batch_num = config['batch_num']    # Actually sequence length
+		self.batch_num = config['seq_len']
 		self._shuffle()
 
 	def _shuffle(self):
@@ -155,10 +155,43 @@ class DAVIS_seq_dataloader(object):
 
 		return np.array(img_blobs), np.array(np.expand_dims(seg_blobs, axis=3))
 
+"""
+The pair dataloader for DAVIS
+Used for pair matching net (Analogy-making model, Siamese net, etc.)
+
+TODO: multiprocessing version
+"""
+class DAVIS_pair_dataloader(DAVIS_seq_dataloader):
+	def __init__(self, config):
+		DAVIS_seq_dataloader.__init__(self, config)
+		self.batch_num = config['batch_num']
+
+	def get_next_minibatch(self):
+		img_blobs = []
+		seg_blobs = []
+		for i in range(self.batch_num):
+			seq = self.seq_list[self.temp_pointer]
+			# Randomly take a pair from each sequence
+			idxs = np.random.permutation(self.seq_len[seq])[0:2]
+			for idx in idxs:
+				name = seq + '%05d' % idx
+				img  = cv2.imread(self._img_at(name + '.jpg')) - MEAN_PIXEL
+				seg  = cv2.imread(self._seg_at(name + '.png'), cv2.CV_LOAD_IMAGE_GRAYSCALE) / 255
+
+				img_blobs.append(img)
+				seg_blobs.append(seg)
+
+			self.temp_pointer += 1
+			if self.temp_pointer >= self.num_seq:
+				self._shuffle()
+				self.epoch += 1
+
+		return np.array(img_blobs), np.array(np.expand_dims(seg_blobs, axis=3))
 
 if __name__ == '__main__':
 	config = {
 	'batch_num':5, 
+	'seq_len': 5,    # Only useful for seq loader
 	'iter':100000, 
 	'weight_decay': 0.0005,
 	'base_lr': 0.001,
@@ -166,8 +199,8 @@ if __name__ == '__main__':
 	}
 
 	# dataloader = DAVIS_dataloader(config)
-	# minibatch = dataloader.get_next_minibatch()
-	dataloader = DAVIS_seq_dataloader(config)
+	# dataloader = DAVIS_seq_dataloader(config)
+	dataloader = DAVIS_pair_dataloader(config)
 	minibatch = dataloader.get_next_minibatch()
 
 	ipdb.set_trace()
