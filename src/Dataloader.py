@@ -166,8 +166,24 @@ TODO: multiprocessing version
 """
 class DAVIS_pair_dataloader(DAVIS_seq_dataloader):
 	def __init__(self, config):
-		DAVIS_seq_dataloader.__init__(self, config)
+		self.root = '../data/DAVIS/'
+		seq_set = self.root + 'SequenceSets/trainval.txt'
+		with open(seq_set) as f:
+			self.seq_list = f.read().rstrip().split('\n')
+
+		self.num_seq = len(self.seq_list)
+		self.temp_pointer = 0
+		self.epoch = 0
+
+		# Get length of each sequence
+		self.seq_len = {}
+		for seq in self.seq_list:
+			temp = glob.glob(self.root + 'JPEGImages/480p/' + seq + '*.jpg')
+			self.seq_len[seq] = len(temp)
+
 		self.batch_num = config['batch_num']
+		self._shuffle()
+		
 
 	def get_next_minibatch(self):
 		img_blobs = []
@@ -199,7 +215,7 @@ class DAVIS_pair_dataloader(DAVIS_seq_dataloader):
 if __name__ == '__main__':
 	config = {
 	'batch_num':5, 
-	'seq_len': 5,    # Only useful for seq loader
+	# 'seq_len': 5,    # Only useful for seq loader
 	'iter':100000, 
 	'weight_decay': 0.0005,
 	'base_lr': 0.001,
