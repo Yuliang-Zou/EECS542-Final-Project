@@ -135,6 +135,9 @@ class DAVIS_seq_dataloader(object):
 	def _seg_at(self, name):
 		return self.root + 'Annotations/480p/' + name
 
+	def get_epoch(self):
+		return self.epoch
+
 	def get_next_minibatch(self):
 		img_blobs = []
 		seg_blobs = []
