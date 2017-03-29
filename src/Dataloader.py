@@ -173,6 +173,8 @@ class DAVIS_pair_dataloader(DAVIS_seq_dataloader):
 		img_blobs = []
 		seg_blobs = []
 		for i in range(self.batch_num):
+			img_blob = []
+			seg_blob = []
 			seq = self.seq_list[self.temp_pointer]
 			# Randomly take a pair from each sequence
 			idxs = np.random.permutation(self.seq_len[seq])[0:2]
@@ -181,15 +183,18 @@ class DAVIS_pair_dataloader(DAVIS_seq_dataloader):
 				img  = cv2.imread(self._img_at(name + '.jpg')) - MEAN_PIXEL
 				seg  = cv2.imread(self._seg_at(name + '.png'), cv2.CV_LOAD_IMAGE_GRAYSCALE) / 255
 
-				img_blobs.append(img)
-				seg_blobs.append(seg)
+				img_blob.append(img)
+				seg_blob.append(seg)
+
+			img_blobs.append(img_blob)
+			seg_blobs.append(seg_blob)
 
 			self.temp_pointer += 1
 			if self.temp_pointer >= self.num_seq:
 				self._shuffle()
 				self.epoch += 1
 
-		return np.array(img_blobs), np.array(np.expand_dims(seg_blobs, axis=3))
+		return np.array(img_blobs), np.array(np.expand_dims(seg_blobs, axis=4))
 
 if __name__ == '__main__':
 	config = {
