@@ -794,8 +794,8 @@ class AnalogyNet(Network):
 				padding='SAME', name='z') + b_deconv2_2
 			a_deconv2_2 = tf.nn.relu(z_deconv2_2)
 
-		shape1 = tf.shape(self.img)[1]
-		shape2 = tf.shape(self.img)[2]
+		shape1 = tf.shape(self.img)[2]
+		shape2 = tf.shape(self.img)[3]
 
 		# Upsample deconv
 		with tf.variable_scope('deconv3_1') as scope:
