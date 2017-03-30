@@ -741,9 +741,9 @@ class AnalogyNet(Network):
 		segA = seg_emb_reshape[:,0,:,:,:]
 		segB = seg_emb_reshape[:,1,:,:,:]
 
-		# imgA - imgB + segB
+		# imgA - imgB + segB ~= segA
 		ABB = imgA - imgB + segB
-		# imgB - imgA + segA
+		# imgB - imgA + segA ~= segB
 		BAA = imgB - imgA + segA
 
 		pred_emb = tf.concat(0, [ABB, BAA])
@@ -852,8 +852,8 @@ class AnalogyNet(Network):
 	"""Add pixelwise softmax loss"""
 	def add_loss_op(self):
 		pred = self.get_output('deconv_3_2')
-		pred_B = pred[:self.batch_num,:,:,:]
-		pred_A = pred[self.batch_num:,:,:,:]
+		pred_A = pred[:self.batch_num,:,:,:]
+		pred_B = pred[self.batch_num:,:,:,:]
 
 		seg_A = self.seg[:,0,:,:,:]
 		seg_B = self.seg[:,1,:,:,:]
