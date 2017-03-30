@@ -1,7 +1,7 @@
 # Training code
 # Author: Yuliang Zou
 #         ylzou@umich.edu
-# Date:   2017-03-24
+# Date:   2017-03-29
 
 import numpy as np
 import tensorflow as tf
@@ -23,8 +23,8 @@ config = {
 
 if __name__ == '__main__':
 	# Load pre-trained model
-	# model_path = '../model/VGG_imagenet.npy'
-	# data_dict = np.load(model_path).item()
+	model_path = '../model/VGG_imagenet.npy'
+	data_dict = np.load(model_path).item()
 
 	# Set up model and data loader
 	model = AnalogyNet(config)
@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
 	with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
 		session.run(init)
-		# model.load(data_dict, session)
+		model.load(data_dict, session)
 		saver = tf.train.Saver()
 
 		loss = 0

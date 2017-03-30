@@ -593,6 +593,21 @@ class AnalogyNet(Network):
 		self.add_loss_op()
 		self.add_train_op()
 
+	"""Override: Load pre-trained model from numpy data_dict"""
+	def load(self, data_dict, session, name='img_enc_', ignore_missing=True):
+		for key in data_dict:
+			with tf.variable_scope(name + key, reuse=True):
+				for subkey in data_dict[key]:
+					try:
+						# A bit different here
+						var = self.layers[name + key][subkey]
+						session.run(var.assign(data_dict[key][subkey]))
+						print "Assign pretrain model " + subkey + " to " + name + key
+					except:
+						print "Ignore " + name + key
+						if not ignore_missing:
+							raise
+
 	def _add_vgg_conv(self, inputs, name=''):
 		if name == 'seg_enc_':
 			input_dim = 1
