@@ -33,7 +33,7 @@ if __name__ == '__main__':
 	DECAY = False    # decay flag
 	init = tf.initialize_all_variables()
 
-	data_loader = DAVIS_pair_dataloader(config)
+	data_loader = DAVIS_pair_dataloader(config, split='train')
 	num_iters = config['iter']
 
 	with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
@@ -46,16 +46,26 @@ if __name__ == '__main__':
 			minibatch = data_loader.get_next_minibatch()
 			feed_dict = {model.img: minibatch[0],
 						model.seg: minibatch[1]}
-			# shape = session.run(tf.shape(model.img), feed_dict=feed_dict)
-			# ipdb.set_trace()
-			_, temp_loss = session.run([model.train_op, model.loss], feed_dict=feed_dict)
-			loss += temp_loss
+			eval_list = [model.train_op, model.loss, model.loss_cross, model.loss, model.loss, model.loss]
+			if model.TV_norm:
+				eval_list[4] = model.loss_cross_TV
+			if model.autoencoder:
+				eval_list[3] = model.loss_autoencoder
+				eval_list[4] += model.loss_auto_TV
+			if model.feature_loss:
+				eval_list[5] = model.loss_feature
 
+			# _, temp_loss = session.run([model.train_op, model.loss], feed_dict=feed_dict)
+			# loss += temp_loss
+
+			# val = session.run(model.temp, feed_dict=feed_dict)
+			val_list = session.run(eval_list, feed_dict=feed_dict)
+			ipdb.set_trace()
 			loss_list.append(temp_loss)
 			f.write(str(temp_loss) + '\n')
 			print('Epoch:[%d], Iter:[%d/%d]. Loss: %.4f' 
 				% (data_loader.get_epoch(), 
-					i, config['iter'],
+					i+1, config['iter'],
 					temp_loss))
 
 			# Learning rate decay
@@ -66,9 +76,9 @@ if __name__ == '__main__':
 			# 		DECAY = True
 
 			# Monitor
-			if i % 20 == 0 and i != 0:
+			if (i+1) % 20 == 0 and i != 0:
 				loss /= 20
-				print 'Iter: {}'.format(i) + '/{}'.format(num_iters) + ', loss = ' + str(loss)					
+				print 'Iter: {}'.format(i+1) + '/{}'.format(num_iters) + ', loss = ' + str(loss)					
 				loss = 0
 
 			# Write to saver

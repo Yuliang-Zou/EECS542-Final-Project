@@ -165,9 +165,9 @@ Used for pair matching net (Analogy-making model, Siamese net, etc.)
 TODO: multiprocessing version
 """
 class DAVIS_pair_dataloader(DAVIS_seq_dataloader):
-	def __init__(self, config):
+	def __init__(self, config, split='train'):
 		self.root = '../data/DAVIS/'
-		seq_set = self.root + 'SequenceSets/trainval.txt'
+		seq_set = self.root + 'SequenceSets/' + split + '.txt'
 		with open(seq_set) as f:
 			self.seq_list = f.read().rstrip().split('\n')
 
