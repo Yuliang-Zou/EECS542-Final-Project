@@ -515,9 +515,9 @@ class ConvBaseNet(BaseNet):
 					w, strides=[1,1,1,1], padding='SAME') + b
 				i, j, f, o = tf.split(3, 4, concat)
 
-				new_cell = (cell * tf.nn.sigmoid(f + forget_bias) + 
-					tf.nn.sigmoid(i) * activation(j))
-				new_hidd = activation(new_cell) + tf.nn.sigmoid(o)
+				new_cell = (cell * tf.sigmoid(f + forget_bias) + 
+					tf.sigmoid(i) * activation(j))
+				new_hidd = activation(new_cell) + tf.sigmoid(o)
 				output.append(new_hidd)
 
 				cell = new_cell
@@ -541,9 +541,9 @@ class ConvBaseNet(BaseNet):
 				strides=[1,1,1,1], padding='SAME') + b
 			i, j, f, o = tf.split(3, 4, concat)
 
-			new_cell = (self.cell * tf.nn.sigmoid(f + forget_bias) + 
-				tf.nn.sigmoid(i) * activation(j))
-			new_hidd = activation(new_cell) + tf.nn.sigmoid(o)
+			new_cell = (self.cell * tf.sigmoid(f + forget_bias) + 
+				tf.sigmoid(i) * activation(j))
+			new_hidd = activation(new_cell) + tf.sigmoid(o)
 
 			self.outputs['conv_lstm'] = new_hidd
 			self.outputs['cell'] = new_cell
@@ -576,6 +576,14 @@ class AnalogyNet(Network):
 		self.base_lr = config['base_lr']
 		self.momentum = config['momentum']
 
+		# Default setting for loss function
+		if 'autoencoder' not in config or 'autoencoder_weight' not in config:
+			self.autoencoder = True
+			self.autoencoder_weight = 1.0
+		if 'feature_loss' not in config or 'feature_loss_weight' not in config:
+			self.feature_loss = False
+			self.feature_loss_weight = 0.1
+
 		# batch_num * (A, B) pairs
 		self.img  = tf.placeholder(tf.float32, 
 			[self.batch_num, 2, None, None, 3])
@@ -604,7 +612,7 @@ class AnalogyNet(Network):
 						session.run(var.assign(data_dict[key][subkey]))
 						print "Assign pretrain model " + subkey + " to " + name + key
 					except:
-						print "Ignore " + name + key
+						print "Ignore " + key
 						if not ignore_missing:
 							raise
 
@@ -623,6 +631,7 @@ class AnalogyNet(Network):
 			z_conv1_1 = tf.nn.conv2d(inputs, w_conv1_1, strides=[1, 1, 1, 1], 
 				padding='SAME') + b_conv1_1
 			a_conv1_1 = tf.nn.relu(z_conv1_1)
+			tf.get_variable_scope().reuse_variables()
 
 		with tf.variable_scope(name + 'conv_1_2') as scope:
 			w_conv1_2 = tf.get_variable('weights', [3, 3, 64, 64], 
@@ -632,6 +641,7 @@ class AnalogyNet(Network):
 			z_conv1_2 = tf.nn.conv2d(a_conv1_1, w_conv1_2, strides=[1, 1, 1, 1], 
 				padding='SAME') + b_conv1_2
 			a_conv1_2 = tf.nn.relu(z_conv1_2)
+			tf.get_variable_scope().reuse_variables()
 		
 		pool1 = tf.nn.max_pool(a_conv1_2, ksize=[1,2,2,1], strides=[1,2,2,1],
 			padding='SAME', name=name+'pool1')
@@ -645,6 +655,7 @@ class AnalogyNet(Network):
 			z_conv2_1 = tf.nn.conv2d(pool1, w_conv2_1, strides=[1, 1, 1, 1], 
 				padding='SAME') + b_conv2_1
 			a_conv2_1 = tf.nn.relu(z_conv2_1)
+			tf.get_variable_scope().reuse_variables()
 
 		with tf.variable_scope(name + 'conv_2_2') as scope:
 			w_conv2_2 = tf.get_variable('weights', [3, 3, 128, 128], 
@@ -654,6 +665,7 @@ class AnalogyNet(Network):
 			z_conv2_2 = tf.nn.conv2d(a_conv2_1, w_conv2_2, strides=[1, 1, 1, 1], 
 				padding='SAME') + b_conv2_2
 			a_conv2_2 = tf.nn.relu(z_conv2_2)
+			tf.get_variable_scope().reuse_variables()
 
 		pool2 = tf.nn.max_pool(a_conv2_2, ksize=[1,2,2,1], strides=[1,2,2,1],
 			padding='SAME', name=name+'pool2')
@@ -667,6 +679,7 @@ class AnalogyNet(Network):
 			z_conv3_1 = tf.nn.conv2d(pool2, w_conv3_1, strides= [1, 1, 1, 1],
 				padding='SAME') + b_conv3_1
 			a_conv3_1 = tf.nn.relu(z_conv3_1)
+			tf.get_variable_scope().reuse_variables()
 
 		with tf.variable_scope(name + 'conv_3_2') as scope:
 			w_conv3_2 = tf.get_variable('weights', [3, 3, 256, 256],
@@ -676,6 +689,7 @@ class AnalogyNet(Network):
 			z_conv3_2 = tf.nn.conv2d(a_conv3_1, w_conv3_2, strides= [1, 1, 1, 1],
 				padding='SAME') + b_conv3_2
 			a_conv3_2 = tf.nn.relu(z_conv3_2)
+			tf.get_variable_scope().reuse_variables()
 
 		with tf.variable_scope(name + 'conv_3_3') as scope:
 			w_conv3_3 = tf.get_variable('weights', [3, 3, 256, 256],
@@ -685,6 +699,7 @@ class AnalogyNet(Network):
 			z_conv3_3 = tf.nn.conv2d(a_conv3_2, w_conv3_3, strides= [1, 1, 1, 1],
 				padding='SAME') + b_conv3_3
 			a_conv3_3 = tf.nn.relu(z_conv3_3)
+			tf.get_variable_scope().reuse_variables()
 
 		pool3 = tf.nn.max_pool(a_conv3_3, ksize=[1,2,2,1], strides=[1,2,2,1],
 			padding='SAME', name=name+'pool3')
@@ -748,40 +763,87 @@ class AnalogyNet(Network):
 
 		pred_emb = tf.concat(0, [ABB, BAA])
 
+		if self.feature_loss:
+			self.fake_A = ABB
+			self.real_A = segA
+			self.fake_B = BAA
+			self.real_B = segB
+
+		self._add_vgg_deconv(pred_emb)
+
+	"""Test branch"""
+	def add_test_branch(self):
+		self.src_img = tf.placeholder(tf.float32, 
+			[1, None, None, 3])
+		self.src_seg = tf.placeholder(tf.float32, 
+			[1, None, None, 1])
+		self.des_img = tf.placeholder(tf.float32, 
+			[1, None, None, 3])
+
+		imgs = tf.concat(0, [self.src_img, self.des_img])
+		self._add_vgg_conv(imgs, name='img_enc_')
+		self._add_vgg_conv(self.src_seg, name='seg_enc_')
+		img_emb = self.get_output('img_enc_pool3')
+		seg_emb = self.get_output('seg_enc_pool3')		
+		temp = img_emb[1,:,:,:] - img_emb[0,:,:,:] + seg_emb
+		self._add_vgg_deconv(temp, save=False)
+
+	def _add_vgg_deconv(self, inputs, save=True):
 		temp = self.get_output('img_enc_pool2')
 		shape1 = tf.shape(temp)[1]
 		shape2 = tf.shape(temp)[2]
 
 		# Upsample deconv
 		with tf.variable_scope('deconv1_1') as scope:
-			w_deconv1_1 = tf.get_variable('weights', [4, 4, 256, 256], 
-				initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
-			b_deconv1_1 = tf.get_variable('biases', [256], 
-				initializer=tf.constant_initializer(0))
-			z_deconv1_1 = tf.nn.conv2d_transpose(pred_emb, w_deconv1_1, 
-				[2*self.batch_num, shape1, shape2, 256], strides=[1,2,2,1],
-				padding='SAME', name='z') + b_deconv1_1
+			if save:
+				w_deconv1_1 = tf.get_variable('weights', [4, 4, 256, 256], 
+					initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
+				b_deconv1_1 = tf.get_variable('biases', [256], 
+					initializer=tf.constant_initializer(0))
+				tf.get_variable_scope().reuse_variables()
+			else:
+				w_deconv1_1 = self.layers['deconv1_1']['weights']
+				b_deconv1_1 = self.layers['deconv1_1']['biases']
+
+			z_deconv1_1 = tf.nn.conv2d_transpose(inputs, w_deconv1_1, 
+					[2*self.batch_num, shape1, shape2, 256], strides=[1,2,2,1],
+					padding='SAME', name='z') + b_deconv1_1
 			a_deconv1_1 = tf.nn.relu(z_deconv1_1)
+			
 
 		with tf.variable_scope('deconv1_2') as scope:
-			w_deconv1_2 = tf.get_variable('weights', [3, 3, 256, 256], 
-				initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
-			b_deconv1_2 = tf.get_variable('biases', [256], 
-				initializer=tf.constant_initializer(0))
+			if save:
+				w_deconv1_2 = tf.get_variable('weights', [3, 3, 256, 256], 
+					initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
+				b_deconv1_2 = tf.get_variable('biases', [256], 
+					initializer=tf.constant_initializer(0))
+				tf.get_variable_scope().reuse_variables()
+			else:
+				w_deconv1_2 = self.layers['deconv1_2']['weights']
+				b_deconv1_2 = self.layers['deconv1_2']['biases']
+
 			z_deconv1_2 = tf.nn.conv2d_transpose(a_deconv1_1, w_deconv1_2, 
 				[2*self.batch_num, shape1, shape2, 256], strides=[1,1,1,1],
 				padding='SAME', name='z') + b_deconv1_2
 			a_deconv1_2 = tf.nn.relu(z_deconv1_2)
+			
 
 		with tf.variable_scope('deconv1_3') as scope:
-			w_deconv1_3 = tf.get_variable('weights', [3, 3, 256, 256], 
-				initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
-			b_deconv1_3 = tf.get_variable('biases', [256], 
-				initializer=tf.constant_initializer(0))
+			if save:
+				w_deconv1_3 = tf.get_variable('weights', [3, 3, 256, 256], 
+					initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
+				b_deconv1_3 = tf.get_variable('biases', [256], 
+					initializer=tf.constant_initializer(0))
+				tf.get_variable_scope().reuse_variables()
+			else:
+				w_deconv1_3 = self.layers['deconv1_3']['weights']
+				b_deconv1_3 = self.layers['deconv1_3']['biases']
+
 			z_deconv1_3 = tf.nn.conv2d_transpose(a_deconv1_2, w_deconv1_3, 
 				[2*self.batch_num, shape1, shape2, 256], strides=[1,1,1,1],
 				padding='SAME', name='z') + b_deconv1_3
 			a_deconv1_3 = tf.nn.relu(z_deconv1_3)
+			
 
 		
 		temp = self.get_output('img_enc_pool1')
@@ -790,70 +852,101 @@ class AnalogyNet(Network):
 
 		# Upsample deconv
 		with tf.variable_scope('deconv2_1') as scope:
-			w_deconv2_1 = tf.get_variable('weights', [4, 4, 128, 256], 
-				initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
-			b_deconv2_1 = tf.get_variable('biases', [128], 
-				initializer=tf.constant_initializer(0))
+			if save:
+				w_deconv2_1 = tf.get_variable('weights', [4, 4, 128, 256], 
+					initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
+				b_deconv2_1 = tf.get_variable('biases', [128], 
+					initializer=tf.constant_initializer(0))
+				tf.get_variable_scope().reuse_variables()
+			else:
+				w_deconv2_1 = self.layers['deconv2_1']['weights']
+				b_deconv2_1 = self.layers['deconv2_1']['biases']
+
 			z_deconv2_1 = tf.nn.conv2d_transpose(a_deconv1_3, w_deconv2_1, 
 				[2*self.batch_num, shape1, shape2, 128], strides=[1,2,2,1],
 				padding='SAME', name='z') + b_deconv2_1
 			a_deconv2_1 = tf.nn.relu(z_deconv2_1)
+			
 
 		with tf.variable_scope('deconv2_2') as scope:
-			w_deconv2_2 = tf.get_variable('weights', [3, 3, 128, 128], 
-				initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
-			b_deconv2_2 = tf.get_variable('biases', [128], 
-				initializer=tf.constant_initializer(0))
+			if save:
+				w_deconv2_2 = tf.get_variable('weights', [3, 3, 128, 128], 
+					initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
+				b_deconv2_2 = tf.get_variable('biases', [128], 
+					initializer=tf.constant_initializer(0))
+				tf.get_variable_scope().reuse_variables()
+			else:
+				w_deconv2_2 = self.layers['deconv2_2']['weights']
+				b_deconv2_2 = self.layers['deconv2_2']['biases']
+
 			z_deconv2_2 = tf.nn.conv2d_transpose(a_deconv2_1, w_deconv2_2, 
 				[2*self.batch_num, shape1, shape2, 128], strides=[1,1,1,1],
 				padding='SAME', name='z') + b_deconv2_2
 			a_deconv2_2 = tf.nn.relu(z_deconv2_2)
+			
 
 		shape1 = tf.shape(self.img)[2]
 		shape2 = tf.shape(self.img)[3]
 
 		# Upsample deconv
 		with tf.variable_scope('deconv3_1') as scope:
-			w_deconv3_1 = tf.get_variable('weights', [4, 4, 64, 128], 
-				initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
-			b_deconv3_1 = tf.get_variable('biases', [64], 
-				initializer=tf.constant_initializer(0))
+			if save:
+				w_deconv3_1 = tf.get_variable('weights', [4, 4, 64, 128], 
+					initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
+				b_deconv3_1 = tf.get_variable('biases', [64], 
+					initializer=tf.constant_initializer(0))
+				tf.get_variable_scope().reuse_variables()
+			else:
+				w_deconv3_1 = self.layers['deconv3_1']['weights']
+				b_deconv3_1 = self.layers['deconv3_1']['biases']
+
 			z_deconv3_1 = tf.nn.conv2d_transpose(a_deconv2_2, w_deconv3_1, 
 				[2*self.batch_num, shape1, shape2, 64], strides=[1,2,2,1],
 				padding='SAME', name='z') + b_deconv3_1
 			a_deconv3_1 = tf.nn.relu(z_deconv3_1)
 
+
 		with tf.variable_scope('deconv3_2') as scope:
-			w_deconv3_2 = tf.get_variable('weights', [3, 3, 2, 64], 
-				initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
-			b_deconv3_2 = tf.get_variable('biases', [2], 
-				initializer=tf.constant_initializer(0))
+			if save:
+				w_deconv3_2 = tf.get_variable('weights', [3, 3, 2, 64], 
+					initializer=tf.truncated_normal_initializer(0.0, stddev=0.01))
+				b_deconv3_2 = tf.get_variable('biases', [2], 
+					initializer=tf.constant_initializer(0))
+				tf.get_variable_scope().reuse_variables()
+			else:
+				w_deconv3_2 = self.layers['deconv3_2']['weights']
+				b_deconv3_2 = self.layers['deconv3_2']['biases']
+
 			z_deconv3_2 = tf.nn.conv2d_transpose(a_deconv3_1, w_deconv3_2, 
 				[2*self.batch_num, shape1, shape2, 2], strides=[1,1,1,1],
-				padding='SAME', name='z') + b_deconv3_2	
+				padding='SAME', name='z') + b_deconv3_2
+			
 
 		# Add to store dicts
-		self.outputs['deconv_1_1'] = a_deconv1_1
-		self.outputs['deconv_1_2'] = a_deconv1_2
-		self.outputs['deconv_1_3'] = a_deconv1_3
-		self.outputs['deconv_2_1'] = a_deconv2_1
-		self.outputs['deconv_2_2'] = a_deconv2_2
-		self.outputs['deconv_3_1'] = a_deconv3_1
-		self.outputs['deconv_3_2'] = z_deconv3_2
+		if save:
+			self.outputs['deconv_1_1'] = a_deconv1_1
+			self.outputs['deconv_1_2'] = a_deconv1_2
+			self.outputs['deconv_1_3'] = a_deconv1_3
+			self.outputs['deconv_2_1'] = a_deconv2_1
+			self.outputs['deconv_2_2'] = a_deconv2_2
+			self.outputs['deconv_3_1'] = a_deconv3_1
+			self.outputs['deconv_3_2'] = z_deconv3_2
 
-		self.layers['deconv1_1'] = {'weights':w_deconv1_1, 'biases':b_deconv1_1}
-		self.layers['deconv1_2'] = {'weights':w_deconv1_2, 'biases':b_deconv1_2}
-		self.layers['deconv1_3'] = {'weights':w_deconv1_3, 'biases':b_deconv1_3}
-		self.layers['deconv2_1'] = {'weights':w_deconv2_1, 'biases':b_deconv2_1}
-		self.layers['deconv2_2'] = {'weights':w_deconv2_2, 'biases':b_deconv2_2}
-		self.layers['deconv3_1'] = {'weights':w_deconv3_1, 'biases':b_deconv3_1}
-		self.layers['deconv3_2'] = {'weights':w_deconv3_2, 'biases':b_deconv3_2}
+			self.layers['deconv1_1'] = {'weights':w_deconv1_1, 'biases':b_deconv1_1}
+			self.layers['deconv1_2'] = {'weights':w_deconv1_2, 'biases':b_deconv1_2}
+			self.layers['deconv1_3'] = {'weights':w_deconv1_3, 'biases':b_deconv1_3}
+			self.layers['deconv2_1'] = {'weights':w_deconv2_1, 'biases':b_deconv2_1}
+			self.layers['deconv2_2'] = {'weights':w_deconv2_2, 'biases':b_deconv2_2}
+			self.layers['deconv3_1'] = {'weights':w_deconv3_1, 'biases':b_deconv3_1}
+			self.layers['deconv3_2'] = {'weights':w_deconv3_2, 'biases':b_deconv3_2}
+		else:
+			return z_deconv3_2
 
-	"""Add pixelwise softmax loss"""
-	def add_loss_op(self):
+	"""Add cross-modality reconstruction pixelwise softmax loss"""
+	def add_cross_loss(self):
 		pred = self.get_output('deconv_3_2')
 		pred_A = pred[:self.batch_num,:,:,:]
-		pred_B = pred[self.batch_num:,:,:,:]
+		pred_B = pred[self.batch_num:2*self.batch_num,:,:,:]
 
 		seg_A = self.seg[:,0,:,:,:]
 		seg_B = self.seg[:,1,:,:,:]
@@ -865,7 +958,55 @@ class AnalogyNet(Network):
 		seg_reshape = tf.reshape(tf.concat(0, [seg_A, seg_B]), [-1])
 		loss = tf.nn.sparse_softmax_cross_entropy_with_logits(pred_reshape, seg_reshape)
 
-		self.loss = tf.reduce_mean(loss)
+		self.loss_cross = tf.reduce_mean(loss)
+		self.loss = self.loss_cross
+
+
+	"""Add autoencoder reconstruction pixelwise softmax loss"""
+	def add_auto_loss(self):
+		seg_emb = self.get_output('seg_enc_pool3')
+		seg_pred = self._add_vgg_deconv(seg_emb, save=False)
+
+		pred_A = seg_pred[:self.batch_num,:,:,:]
+		pred_B = seg_pred[self.batch_num:,:,:,:]
+
+		seg_A = self.seg[:,0,:,:,:]
+		seg_B = self.seg[:,1,:,:,:]
+
+		# shape1 = tf.shape(seg_pred)[1]
+		# shape2 = tf.shape(seg_pred)[2]
+
+		pred_reshape = tf.reshape(tf.concat(0, [pred_A, pred_B]), [-1, 2])
+		seg_reshape = tf.reshape(tf.concat(0, [seg_A, seg_B]), [-1])
+		loss = tf.nn.sparse_softmax_cross_entropy_with_logits(pred_reshape, seg_reshape)
+
+		self.loss_autoencoder = self.autoencoder_weight * tf.reduce_mean(loss)
+		self.loss += self.loss_autoencoder
+
+
+	"""Add loss between fake and real seg in feature space"""
+	def add_feature_loss(self):
+		temp = tf.nn.l2_loss(self.fake_A - self.real_A) + tf.nn.l2_loss(self.fake_B - self.real_B)
+		self.loss_feature = self.feature_loss_weight * tf.reduce_mean(temp)
+		self.loss += self.loss_feature
+
+	"""Add weight decay"""
+	def add_weight_decay(self):
+		for key in self.layers:
+			w = self.layers[key]['weights']
+			self.loss += self.weight_decay * tf.nn.l2_loss(w)
+
+	"""Sum up all the loss"""
+	def add_loss_op(self):
+		self.add_cross_loss()
+		self.add_weight_decay()
+
+		if self.autoencoder:
+			self.add_auto_loss()
+
+		if self.feature_loss:
+			self.add_feature_loss()
+		
 
 	"""Set up training optimization"""
 	def add_train_op(self):

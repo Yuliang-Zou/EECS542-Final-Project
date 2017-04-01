@@ -212,6 +212,76 @@ class DAVIS_pair_dataloader(DAVIS_seq_dataloader):
 
 		return np.array(img_blobs), np.array(np.expand_dims(seg_blobs, axis=4))
 
+"""
+The test time dataloader for DAVIS
+Only the first frame has its ground truth mask
+
+TODO: multiprocessing version
+"""
+class DAVIS_test_dataloader(object):
+	def __init__(self, res='480p', split='val'):
+		self.root = '../data/DAVIS/'
+		seq_set = self.root + 'SequenceSets/' + split + '.txt'
+		with open(seq_set) as f:
+			self.seq_list = f.read().rstrip().split('\n')
+
+		self.num_seq = len(self.seq_list)
+		self.temp_pointer = 0
+		self.inside_pointer = 1
+		self.res = res
+		self.has_next = True
+
+		# Get length of each sequence
+		self.seq_len = {}
+		for seq in self.seq_list:
+			temp = glob.glob(self.root + 'JPEGImages/' + res + '/' + seq + '*.jpg')
+			self.seq_len[seq] = len(temp)
+
+	def _img_at(self, name):
+		return self.root + 'JPEGImages/' + self.res + '/' + name
+
+	def _seg_at(self, name):
+		return self.root + 'Annotations/' + self.res + '/' + name
+
+	def has_next(self):
+		return self.has_next
+
+	"""Each time ouput first frame, first mask, and query frame"""
+	def get_next_minibatch(self):
+		img_blobs = []
+		seg_blobs = []
+		for i in [0]:
+			img_blob = []
+			seg_blob = []
+			seq = self.seq_list[self.temp_pointer]
+			# Randomly take a pair from each sequence
+			idxs = [0, self.inside_pointer]
+			for idx in idxs:
+				img_name = seq + '%05d' % idx
+				seg_name = seq + '%05d' % idx    # only for visualization
+				# seg_name = seq + '%05d' % 0    # fixed
+				img  = cv2.imread(self._img_at(img_name + '.jpg')) - MEAN_PIXEL
+				seg  = cv2.imread(self._seg_at(seg_name + '.png'), cv2.CV_LOAD_IMAGE_GRAYSCALE) / 255
+
+				img_blob.append(img)
+				seg_blob.append(seg)
+
+			img_blobs.append(img_blob)
+			seg_blobs.append(seg_blob)
+
+			self.inside_pointer += 1
+			if self.inside_pointer >= self.seq_len[seq]:
+				self.temp_pointer += 1
+				self.inside_pointer = 1
+
+			if self.temp_pointer >= self.num_seq:
+				print 'Already loaded all the frames!'
+				self.has_next = False
+				self.temp_pointer = 0
+				# ipdb.set_trace()
+
+		return np.array(img_blobs), np.array(np.expand_dims(seg_blobs, axis=4))
+
 if __name__ == '__main__':
 	config = {
 	'batch_num':5, 
@@ -224,7 +294,8 @@ if __name__ == '__main__':
 
 	# dataloader = DAVIS_dataloader(config)
 	# dataloader = DAVIS_seq_dataloader(config)
-	dataloader = DAVIS_pair_dataloader(config)
+	# dataloader = DAVIS_pair_dataloader(config)
+	dataloader = DAVIS_test_dataloader()
 	minibatch = dataloader.get_next_minibatch()
 
 	ipdb.set_trace()

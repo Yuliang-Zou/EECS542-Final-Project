@@ -17,7 +17,7 @@ config = {
 'batch_num':2, 
 'iter': 70000,
 'weight_decay': 0.0005,
-'base_lr': 1e-8,
+'base_lr': 1e-3,
 'momentum': 0.9
 }
 
@@ -46,27 +46,19 @@ if __name__ == '__main__':
 			minibatch = data_loader.get_next_minibatch()
 			feed_dict = {model.img: minibatch[0],
 						model.seg: minibatch[1]}
-			eval_list = [model.train_op, model.loss, model.loss_cross, model.loss, model.loss, model.loss]
-			if model.TV_norm:
-				eval_list[4] = model.loss_cross_TV
-			if model.autoencoder:
-				eval_list[3] = model.loss_autoencoder
-				eval_list[4] += model.loss_auto_TV
-			if model.feature_loss:
-				eval_list[5] = model.loss_feature
+			eval_list = [model.train_op, model.loss, model.loss_cross, model.loss_autoencoder]
 
 			# _, temp_loss = session.run([model.train_op, model.loss], feed_dict=feed_dict)
 			# loss += temp_loss
 
-			# val = session.run(model.temp, feed_dict=feed_dict)
 			val_list = session.run(eval_list, feed_dict=feed_dict)
-			ipdb.set_trace()
+			temp_loss = val_list[1]
 			loss_list.append(temp_loss)
 			f.write(str(temp_loss) + '\n')
-			print('Epoch:[%d], Iter:[%d/%d]. Loss: %.4f' 
+			print('Epoch:[%d], Iter:[%d/%d]. Cross Loss: %.4f, Auto Loss: %.4f' 
 				% (data_loader.get_epoch(), 
 					i+1, config['iter'],
-					temp_loss))
+					val_list[2], val_list[3]))
 
 			# Learning rate decay
 			# if len(loss_list) > 100 and not DECAY:
