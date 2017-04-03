@@ -581,7 +581,7 @@ class AnalogyNet(Network):
 			self.autoencoder = True
 			self.autoencoder_weight = 1.0
 		if 'feature_loss' not in config or 'feature_loss_weight' not in config:
-			self.feature_loss = False
+			self.feature_loss = True
 			self.feature_loss_weight = 0.1
 
 		# batch_num * (A, B) pairs
@@ -986,7 +986,7 @@ class AnalogyNet(Network):
 
 	"""Add loss between fake and real seg in feature space"""
 	def add_feature_loss(self):
-		temp = tf.nn.l2_loss(self.fake_A - self.real_A) + tf.nn.l2_loss(self.fake_B - self.real_B)
+		temp = tf.abs(self.fake_A - self.real_A) + tf.abs(self.fake_B - self.real_B)
 		self.loss_feature = self.feature_loss_weight * tf.reduce_mean(temp)
 		self.loss += self.loss_feature
 
