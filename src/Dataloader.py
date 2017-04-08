@@ -105,8 +105,8 @@ The dataloader for augmented data
 class augment_dataloader(DAVIS_dataloader):
 	def __init__(self, config):
 		# Note that ImageSet format is a bit different from VOC
-		self.root = '../data/augment/'
-		img_set = self.root + 'all.txt'
+		self.root = '../data/'
+		img_set = self.root + 'augment/all.txt'
 		with open(img_set) as f:
 			self.img_list = f.read().rstrip().split('\n')
 
@@ -313,7 +313,8 @@ if __name__ == '__main__':
 	# dataloader = DAVIS_dataloader(config)
 	# dataloader = DAVIS_seq_dataloader(config)
 	# dataloader = DAVIS_pair_dataloader(config)
-	dataloader = DAVIS_test_dataloader()
+	# dataloader = DAVIS_test_dataloader()
+	dataloader = augment_dataloader(config)
 	minibatch = dataloader.get_next_minibatch()
 
 	ipdb.set_trace()
