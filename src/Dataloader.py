@@ -99,6 +99,24 @@ class DAVIS_dataloader(object):
 
 		return np.array(img_blobs), np.array(np.expand_dims(seg_blobs, axis=3))
 
+"""
+The dataloader for augmented data
+"""
+class augment_dataloader(DAVIS_dataloader):
+	def __init__(self, config):
+		# Note that ImageSet format is a bit different from VOC
+		self.root = '../data/augment/'
+		img_set = self.root + 'all.txt'
+		with open(img_set) as f:
+			self.img_list = f.read().rstrip().split('\n')
+
+		self.num_images = len(self.img_list)
+		self.temp_pointer = 0
+		self.epoch = 0
+		self.step = 0
+		self._shuffle()
+
+		self.batch_num = config['batch_num']
 
 """
 The sequence dataloader for DAVIS

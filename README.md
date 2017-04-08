@@ -11,4 +11,4 @@ This repository contains the source code for EECS542 2017 Winter final project. 
 
 4. Download YouTubeObject data [here](http://vision.cs.utexas.edu/projects/videoseg/data_download_register.html), then put it under the `data/` directory.
 
-5. [Optional] Download my augmented data [here](), then put it under the `data/` directory. You can also modify the `data_augment.py` file to generate your own dataset. 
+5. [Optional] Download my augmented data [here](https://drive.google.com/file/d/0B2SnTpv8L4iLaHpobThSNnNiMkU/view?usp=sharing), then put it under the `data/` directory. You can also modify the `data_augment.py` file to generate your own dataset. 
