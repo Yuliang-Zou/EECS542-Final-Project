@@ -4,7 +4,7 @@ This repository contains the source code to repoduce our guided method results o
 <table><tr><td>
 <img src='./demo/cows.gif'>
 <img src='./demo/drift_chicane.gif'>
-</td>
+</td></tr></table>
 
 ## Requirements
 
