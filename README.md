@@ -1,6 +1,11 @@
 # EECS542-Final-Project
 This repository contains the source code to repoduce our guided method results on [DAVIS Challenge 2016](http://davischallenge.org/index.html). For the unguided method, please check [this repository](https://github.com/gaochen315/DAVIS-Challenge---RPCA) for further details.
 
+<table><tr><td>
+<img src='./demo/cows.gif'>
+<img src='./demo/drift_chicane.gif'>
+</td>
+
 ## Requirements
 
 - Torch
